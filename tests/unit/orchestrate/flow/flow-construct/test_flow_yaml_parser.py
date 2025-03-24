@@ -1,13 +1,10 @@
 import os
 from pathlib import Path
 
-import numpy as np
 import pytest
-from docarray.document.generators import from_ndarray
 
 from jina import Executor, Flow
 from jina.enums import ProtocolType
-from jina.excepts import BadYAMLVersion
 from jina.jaml import JAML
 from jina.jaml.parsers import get_supported_versions
 from jina.parsers.flow import set_flow_parser
@@ -27,45 +24,7 @@ def test_support_versions():
     assert get_supported_versions(Flow) == ['1']
 
 
-def test_load_legacy_and_v1():
-    Flow.load_config('yaml/flow-legacy-syntax.yml')
-    Flow.load_config('yaml/flow-v1-syntax.yml')
-
-    # this should fallback to v1
-    Flow.load_config('yaml/flow-v1.0-syntax.yml')
-
-    with pytest.raises(BadYAMLVersion):
-        Flow.load_config('yaml/flow-v99-syntax.yml')
-
-
-@pytest.mark.slow
-def test_add_needs_inspect(tmpdir):
-    f1 = (
-        Flow()
-        .add(name='executor0', needs='gateway')
-        .add(name='executor1', needs='gateway')
-        .inspect()
-        .needs(['executor0', 'executor1'])
-    )
-    with f1:
-        pass
-
-    f2 = Flow.load_config('yaml/flow-v1.0-syntax.yml')
-
-    with f2:
-        pass
-
-    assert f1._deployment_nodes == f2._deployment_nodes
-
-
-def test_load_dump_load(tmpdir):
-    """TODO: Dumping valid yaml is out of scope of PR#1442, to do in separate PR"""
-    f1 = Flow.load_config('yaml/flow-legacy-syntax.yml')
-    f1.save_config(str(Path(tmpdir) / 'a0.yml'))
-    f2 = Flow.load_config('yaml/flow-v1.0-syntax.yml')
-    f2.save_config(str(Path(tmpdir) / 'a1.yml'))
-
-
+@pytest.mark.skip('jinahub not available')
 @pytest.mark.parametrize(
     'yaml_file', ['yaml/flow-gateway.yml', 'yaml/flow-gateway-api.yml']
 )
@@ -148,12 +107,14 @@ def test_dump_load_build(monkeypatch):
     assert f['gateway'].args.port == f2['gateway'].args.port
 
 
+@pytest.mark.skipif('GITHUB_WORKFLOW' in os.environ, reason='no specific port test in CI')
 def test_load_flow_with_port():
     f = Flow.load_config('yaml/test-flow-port.yml')
     with f:
         assert f.port == 12345
 
 
+@pytest.mark.skipif('GITHUB_WORKFLOW' in os.environ, reason='no specific port test in CI')
 def test_load_flow_from_cli():
     a = set_flow_parser().parse_args(['--uses', 'yaml/test-flow-port.yml'])
     f = Flow.load_config(a.uses)
@@ -163,7 +124,7 @@ def test_load_flow_from_cli():
 
 def test_load_flow_from_yaml():
     with open(
-        cur_dir.parent.parent.parent / 'yaml' / 'test-flow.yml', encoding='utf-8'
+            cur_dir.parent.parent.parent / 'yaml' / 'test-flow.yml', encoding='utf-8'
     ) as fp:
         _ = Flow.load_config(fp)
 
@@ -195,12 +156,6 @@ class DummyEncoder(Executor):
     pass
 
 
-def test_flow_uses_from_dict():
-    d1 = {'jtype': 'DummyEncoder', 'metas': {'name': 'dummy1'}}
-    with Flow().add(uses=d1):
-        pass
-
-
 def test_flow_yaml_override_with_protocol():
     from jina.enums import ProtocolType
 
@@ -215,6 +170,7 @@ def test_flow_yaml_override_with_protocol():
     assert f3.protocol == ProtocolType.WEBSOCKET
 
 
+@pytest.mark.skipif('GITHUB_WORKFLOW' in os.environ, reason='no specific port test in CI')
 @pytest.mark.parametrize(
     'yaml_file',
     ['yaml/flow_with_gateway.yml', 'yaml/test-flow-custom-gateway-nested-config.yml'],

@@ -148,28 +148,6 @@ jobs:
       - run: |
           docker run --platform ${{ matrix.test-arch }} localhost:5000/jina/multiarch:latest -v
 
-  hub-test:
-    runs-on: ubuntu-latest
-    needs: [lint-flake-8, code-injection]
-    if: ${{ !github.event.pull_request.head.repo.fork }}
-    steps:
-#      - name: Cancel Previous Runs
-#        uses: styfle/cancel-workflow-action@0.9.0
-#        with:
-#          access_token: ${{ github.token }}
-      - uses: actions/checkout@v2.5.0
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-      - name: Test hubapp with hubpods
-        run: |
-          ./tests/jinahub/test_integration.sh
-        timeout-minutes: 30
-        env:
-          JINAHUB_USERNAME: ${{ secrets.JINAHUB_USERNAME }}
-          JINAHUB_PASSWORD: ${{ secrets.JINAHUB_PASSWORD }}
-
   k8s-flow-test:
     needs: [lint-flake-8, code-injection]
     runs-on: ubuntu-latest
@@ -181,11 +159,12 @@ jobs:
           python-version: "3.10"
       - name: Prepare enviroment
         run: |
-          docker build --build-arg DOCARRAY_VERSION="0.21.0" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
+          docker build --build-arg DOCARRAY_VERSION="0.21.0" --build-arg PYDANTIC_VERSION="==1.10.3" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
           python -m pip install --upgrade pip
           python -m pip install wheel
           pip install ".[all]" --no-cache-dir
           pip install docarray==0.21.0
+          pip install pydantic==1.10.3
           jina
           export JINA_LOG_LEVEL="ERROR"
           curl -LO https://dl.k8s.io/release/v1.21.1/bin/linux/amd64/kubectl
@@ -223,11 +202,12 @@ jobs:
           python-version: "3.10"
       - name: Prepare enviroment
         run: |
-          docker build --build-arg DOCARRAY_VERSION="0.21.0" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
+          docker build --build-arg DOCARRAY_VERSION="0.21.0" --build-arg PYDANTIC_VERSION="==1.10.3" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
           python -m pip install --upgrade pip
           python -m pip install wheel
           pip install ".[all]" --no-cache-dir
           pip install docarray==0.21.0
+          pip install pydantic==1.10.3
           jina
           export JINA_LOG_LEVEL="ERROR"
           curl -LO https://dl.k8s.io/release/v1.21.1/bin/linux/amd64/kubectl
@@ -265,11 +245,12 @@ jobs:
           python-version: "3.10"
       - name: Prepare enviroment
         run: |
-          docker build --build-arg DOCARRAY_VERSION="0.21.0" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
+          docker build --build-arg DOCARRAY_VERSION="0.21.0" --build-arg PYDANTIC_VERSION="==1.10.3" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
           python -m pip install --upgrade pip
           python -m pip install wheel
           pip install ".[all]" --no-cache-dir
           pip install docarray==0.21.0
+          pip install pydantic==1.10.3
           jina
           export JINA_LOG_LEVEL="ERROR"
           curl -LO https://dl.k8s.io/release/v1.21.1/bin/linux/amd64/kubectl
@@ -307,11 +288,12 @@ jobs:
           python-version: 3.8
       - name: Prepare enviroment
         run: |
-          docker build --build-arg DOCARRAY_VERSION="0.21.0" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
+          docker build --build-arg DOCARRAY_VERSION="0.21.0" --build-arg PYDANTIC_VERSION="==1.10.3" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
           python -m pip install --upgrade pip
           python -m pip install wheel
           pip install ".[all]" --no-cache-dir
           pip install docarray==0.21.0
+          pip install pydantic==1.10.3
           jina
           export JINA_LOG_LEVEL="ERROR"
           curl -LO https://dl.k8s.io/release/v1.21.1/bin/linux/amd64/kubectl
@@ -350,11 +332,12 @@ jobs:
           python-version: "3.10"
       - name: Prepare enviroment
         run: |
-          docker build --build-arg DOCARRAY_VERSION="0.21.0" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
+          docker build --build-arg DOCARRAY_VERSION="0.21.0" --build-arg PYDANTIC_VERSION="==1.10.3" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
           python -m pip install --upgrade pip
           python -m pip install wheel
           pip install ".[all]" --no-cache-dir
           pip install docarray==0.21.0
+          pip install pydantic==1.10.3
           jina
           export JINA_LOG_LEVEL="ERROR"
           curl -LO https://dl.k8s.io/release/v1.21.1/bin/linux/amd64/kubectl
@@ -391,11 +374,12 @@ jobs:
           python-version: "3.10"
       - name: Prepare enviroment
         run: |
-          docker build --build-arg DOCARRAY_VERSION="0.21.0" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
+          docker build --build-arg DOCARRAY_VERSION="0.21.0" --build-arg PYDANTIC_VERSION="==1.10.3" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
           python -m pip install --upgrade pip
           python -m pip install wheel
           pip install ".[all]" --no-cache-dir
           pip install docarray==0.21.0
+          pip install pydantic==1.10.3
           jina
           export JINA_LOG_LEVEL="ERROR"
         env:
@@ -441,6 +425,7 @@ jobs:
       matrix:
         python-version: ["3.10"]
         protobuf-version: ['==3.19.6', '']
+        pydantic-version: ['==1.10.3', '<3.0.0']
     steps:
       - uses: actions/checkout@v2.5.0
       - name: Set up Python ${{ matrix.python-version }}
@@ -464,7 +449,8 @@ jobs:
           setuptools-golang-build-manylinux-wheels --pythons cp310-cp310
       - name: Prepare environment
         run: |
-          docker build -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
+          # Take into account in the `test-pip` the versions
+          docker build --build-arg PYDANTIC_VERSION="${{ matrix.pydantic-version }}" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
           python -m pip install --upgrade pip
           python -m pip install wheel
           WHEEL_FILE=$(ls dist/*whl)
@@ -474,22 +460,24 @@ jobs:
           else
             pip install -U protobuf${{ matrix.protobuf-version }} grpcio==1.65.5 grpcio-reflection==1.65.5 grpcio-health-checking==1.65.5
           fi
+          pip install pydantic"${{ matrix.pydantic-version }}"
           jina
           export JINA_LOG_LEVEL="ERROR"
       - name: Test
         id: test
         run: |
           pytest --suppress-no-test-exit-code --force-flaky --min-passes 1 --max-runs 5 --cov=jina --cov-report=xml --timeout=600 -v -s --ignore-glob='tests/integration/hub_usage/dummyhub*' tests/unit/serve/runtimes/test_helper.py
-          pytest --suppress-no-test-exit-code --force-flaky --min-passes 1 --max-runs 5 --cov=jina --cov-report=xml --timeout=600 -v -s --ignore-glob='tests/integration/hub_usage/dummyhub*' tests/integration/docarray_v2/test_v2.py
           pytest --suppress-no-test-exit-code --force-flaky --min-passes 1 --max-runs 5 --cov=jina --cov-report=xml --timeout=600 -v -s --ignore-glob='tests/integration/hub_usage/dummyhub*' tests/integration/deployment_http_composite
           pytest --suppress-no-test-exit-code --force-flaky --min-passes 1 --max-runs 5 --cov=jina --cov-report=xml --timeout=600 -v -s --ignore-glob='tests/integration/hub_usage/dummyhub*' tests/integration/docarray_v2/test_singleton.py
           pytest --suppress-no-test-exit-code --force-flaky --min-passes 1 --max-runs 5 --cov=jina --cov-report=xml --timeout=600 -v -s --ignore-glob='tests/integration/hub_usage/dummyhub*' tests/integration/docarray_v2/test_parameters_as_pydantic.py
           pytest --suppress-no-test-exit-code --force-flaky --min-passes 1 --max-runs 5 --cov=jina --cov-report=xml --timeout=600 -v -s --ignore-glob='tests/integration/hub_usage/dummyhub*' tests/integration/docarray_v2/test_streaming.py
           pytest --suppress-no-test-exit-code --force-flaky --min-passes 1 --max-runs 5 --cov=jina --cov-report=xml --timeout=600 -v -s --ignore-glob='tests/integration/hub_usage/dummyhub*' tests/integration/docarray_v2/csp
           pytest --suppress-no-test-exit-code --force-flaky --min-passes 1 --max-runs 5 --cov=jina --cov-report=xml --timeout=600 -v -s --ignore-glob='tests/integration/hub_usage/dummyhub*' tests/integration/docarray_v2/docker
+          pytest --suppress-no-test-exit-code --force-flaky --min-passes 1 --max-runs 5 --cov=jina --cov-report=xml --timeout=600 -v -s --ignore-glob='tests/integration/hub_usage/dummyhub*' tests/integration/docarray_v2/test_v2.py
+          pytest --suppress-no-test-exit-code --force-flaky --min-passes 1 --max-runs 5 --cov=jina --cov-report=xml --timeout=600 -v -s --ignore-glob='tests/integration/hub_usage/dummyhub*' tests/integration/docarray_v2/test_errors.py
           echo "flag it as jina for codeoverage"
           echo "codecov_flag=jina" >> $GITHUB_OUTPUT
-        timeout-minutes: 45
+        timeout-minutes: 60
         env:
           JINA_AUTH_TOKEN: "${{ secrets.JINA_AUTH_TOKEN }}"
       - name: Check codecov file
@@ -517,6 +505,7 @@ jobs:
       matrix:
         python-version: ["3.10"]
         protobuf-version: ['==3.19.6', '']
+        pydantic-version: ['==1.10.3', '<3.0.0']
     steps:
       - uses: actions/checkout@v2.5.0
       - name: Set up Python ${{ matrix.python-version }}
@@ -540,7 +529,8 @@ jobs:
           setuptools-golang-build-manylinux-wheels --pythons cp310-cp310
       - name: Prepare environment
         run: |
-          docker build -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
+          # Take into account in the `test-pip` the versions
+          docker build --build-arg PYDANTIC_VERSION="${{ matrix.pydantic-version }}" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
           python -m pip install --upgrade pip
           python -m pip install wheel
           WHEEL_FILE=$(ls dist/*whl)
@@ -550,6 +540,7 @@ jobs:
           else
             pip install -U protobuf${{ matrix.protobuf-version }} grpcio==1.65.5 grpcio-reflection==1.65.5 grpcio-health-checking==1.65.5
           fi
+          pip install pydantic"${{ matrix.pydantic-version }}"
           jina
           export JINA_LOG_LEVEL="ERROR"
       - name: Test stateful
@@ -726,12 +717,13 @@ jobs:
           setuptools-golang-build-manylinux-wheels --pythons cp310-cp310
       - name: Prepare environment
         run: |
-          docker build --build-arg DOCARRAY_VERSION="0.21.0" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
+          docker build --build-arg DOCARRAY_VERSION="0.21.0" --build-arg PYDANTIC_VERSION="==1.10.3" -f Dockerfiles/test-pip.Dockerfile -t jinaai/jina:test-pip .
           python -m pip install --upgrade pip
           python -m pip install wheel
           WHEEL_FILE=$(ls dist/*whl)
           pip install "$WHEEL_FILE[all]" --no-cache-dir
           pip install docarray==0.21.0
+          pip install pydantic==1.10.3
           pip install grpcio==1.65.5 grpcio-reflection==1.65.5 grpcio-health-checking==1.65.5
           jina
           export JINA_LOG_LEVEL="ERROR"
@@ -771,7 +763,7 @@ jobs:
       matrix:
         core: ['', 'true']
         perf: ['', 'true']
-        python-env: ['3.7', '3.8', '3.9', '3.10', '3.11']
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
         exclude:
           - core: 'true'
             perf: 'true'
@@ -786,6 +778,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install wheel
           pip install --no-cache-dir .
+          pip list
         env:
           JINA_PIP_INSTALL_CORE: ${{ matrix.core }}
           JINA_PIP_INSTALL_PERF: ${{ matrix.perf }}
@@ -828,7 +821,7 @@ jobs:
   # just for blocking the merge until all parallel core-test are successful
   success-all-test:
     runs-on: ubuntu-latest
-    needs: [commit-lint, core-test, docarray-v-two-test, stateful-docarray-v-two-test, import-test, hub-test, k8s-flow-test, k8s-deployment-test, k8s-graceful-test, k8s-failures-test, k8s-otel-test, docker-compose-test, docker-image-test, check-docstring, check-black, code-injection, build-wheels]
+    needs: [commit-lint, core-test, docarray-v-two-test, stateful-docarray-v-two-test, import-test, k8s-flow-test, k8s-deployment-test, k8s-graceful-test, k8s-failures-test, k8s-otel-test, docker-compose-test, docker-image-test, check-docstring, check-black, code-injection, build-wheels]
 
     if: always()
     steps:

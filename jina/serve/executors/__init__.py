@@ -52,7 +52,10 @@ from jina.serve.helper import (
 from jina.serve.instrumentation import MetricsTimer
 
 if docarray_v2:
-    from docarray.documents.legacy import LegacyDocument
+    from jina._docarray import LegacyDocumentJina
+    from docarray.utils._internal._typing import safe_issubclass
+else:
+    safe_issubclass = issubclass
 
 if TYPE_CHECKING:  # pragma: no cover
     from opentelemetry.context.context import Context
@@ -65,7 +68,7 @@ __all__ = ['BaseExecutor', __dry_run_endpoint__]
 def is_pydantic_model(annotation: Type) -> bool:
     """Method to detect if parameter annotation corresponds to a Pydantic model
 
-    :param annotation: The annotation from which to extract PydantiModel.
+    :param annotation: The annotation from which to extract PydanticModel.
     :return: boolean indicating if a Pydantic model is inside the annotation
     """
     try:
@@ -104,7 +107,7 @@ def get_inner_pydantic_model(annotation: Type) -> bool:
         args = get_args(annotation)
 
         # If the origin itself is a Pydantic model, return True
-        if isinstance(origin, type) and issubclass(origin, BaseModel):
+        if isinstance(origin, type) and safe_issubclass(origin, BaseModel):
             return origin
 
         # Check the arguments (for the actual types inside Union, Optional, etc.)
@@ -188,37 +191,37 @@ class _FunctionWithSchema(NamedTuple):
 
             if not self.is_generator:
                 if self.is_batch_docs and (
-                    not issubclass(self.request_schema, DocList)
-                    or not issubclass(self.response_schema, DocList)
+                    not safe_issubclass(self.request_schema, DocList)
+                    or not safe_issubclass(self.response_schema, DocList)
                 ):
                     faulty_schema = (
                         'request_schema'
-                        if not issubclass(self.request_schema, DocList)
+                        if not safe_issubclass(self.request_schema, DocList)
                         else 'response_schema'
                     )
                     raise Exception(
                         f'The {faulty_schema} schema for {self.fn.__name__}: {self.request_schema} is not a DocList. Please make sure that your endpoint used DocList for request and response schema'
                     )
                 if self.is_singleton_doc and (
-                    not issubclass(self.request_schema, BaseDoc)
-                    or not issubclass(self.response_schema, BaseDoc)
+                    not safe_issubclass(self.request_schema, BaseDoc)
+                    or not safe_issubclass(self.response_schema, BaseDoc)
                 ):
                     faulty_schema = (
                         'request_schema'
-                        if not issubclass(self.request_schema, BaseDoc)
+                        if not safe_issubclass(self.request_schema, BaseDoc)
                         else 'response_schema'
                     )
                     raise Exception(
                         f'The {faulty_schema} schema for {self.fn.__name__}: {self.request_schema} is not a BaseDoc. Please make sure that your endpoint used BaseDoc for request and response schema'
                     )
             else:
-                if not issubclass(self.request_schema, BaseDoc) or not (
-                    issubclass(self.response_schema, BaseDoc)
-                    or issubclass(self.response_schema, BaseDoc)
+                if not safe_issubclass(self.request_schema, BaseDoc) or not (
+                    safe_issubclass(self.response_schema, BaseDoc)
+                    or safe_issubclass(self.response_schema, BaseDoc)
                 ):  # response_schema may be a DocList because by default we use LegacyDocument, and for generators we ignore response
                     faulty_schema = (
                         'request_schema'
-                        if not issubclass(self.request_schema, BaseDoc)
+                        if not safe_issubclass(self.request_schema, BaseDoc)
                         else 'response_schema'
                     )
                     raise Exception(
@@ -257,7 +260,7 @@ class _FunctionWithSchema(NamedTuple):
             from docarray import BaseDoc, DocList
 
             default_annotations = (
-                DocList[LegacyDocument] if is_batch_docs else LegacyDocument
+                DocList[LegacyDocumentJina] if is_batch_docs else LegacyDocumentJina
             )
         else:
             from jina import Document, DocumentArray
@@ -274,13 +277,17 @@ class _FunctionWithSchema(NamedTuple):
             )
             docs_annotation = None
         elif not isinstance(docs_annotation, type):
-            warnings.warn(
-                f'`docs` annotation must be a class if you want to use it'
-                f' as schema input, got {docs_annotation}. try to remove the Optional'
-                f'.fallback to default behavior'
-                ''
-            )
-            docs_annotation = None
+            if docarray_v2:
+                if not safe_issubclass(docs_annotation, DocList):
+                    warnings.warn(
+                        f'`docs` annotation must be a class if you want to use it'
+                        f' as schema input, got {docs_annotation}. try to remove the Optional'
+                        f'.fallback to default behavior'
+                        ''
+                    )
+                    docs_annotation = None
+            else:
+                docs_annotation = None
 
         return_annotation = fn.__annotations__.get('return', None)
 
@@ -307,12 +314,16 @@ class _FunctionWithSchema(NamedTuple):
                 return_annotation = get_args(return_annotation)[0]
 
         elif not isinstance(return_annotation, type):
-            warnings.warn(
-                f'`return` annotation must be a class if you want to use it'
-                f'as schema input, got {docs_annotation}, fallback to default behavior'
-                ''
-            )
-            return_annotation = None
+            if docarray_v2:
+                if not safe_issubclass(return_annotation, DocList):
+                    warnings.warn(
+                        f'`return` annotation must be a class if you want to use it'
+                        f'as schema input, got {docs_annotation}, fallback to default behavior'
+                        ''
+                    )
+                    return_annotation = None
+            else:
+                return_annotation = None
 
         request_schema = docs_annotation or default_annotations
         response_schema = return_annotation or default_annotations
